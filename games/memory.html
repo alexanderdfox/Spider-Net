@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Memory — Spider-Net</title>
+  <link rel="stylesheet" href="../subpage.css" />
+  <style>
+    .mem-hud {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      text-align: center;
+    }
+    .mem-hud strong { color: var(--accent); }
+    .mem-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-width: 360px;
+      margin: 0 auto;
+    }
+    @media (max-width: 400px) {
+      .mem-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .mem-card {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(84, 160, 255, 0.2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      transition: transform 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .mem-card:hover:not(:disabled) {
+      transform: scale(1.03);
+    }
+    .mem-card:disabled {
+      cursor: default;
+    }
+    .mem-card.face-down {
+      background: linear-gradient(145deg, rgba(84, 160, 255, 0.25), rgba(126, 231, 135, 0.12));
+      color: transparent;
+    }
+    .mem-card.face-down::after {
+      content: "🕸";
+      color: var(--muted);
+      font-size: 1.25rem;
+    }
+    .mem-card.matched {
+      background: rgba(126, 231, 135, 0.2);
+      border-color: var(--accent-dim);
+    }
+    .mem-actions { text-align: center; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="subpage-top"><a class="back" href="../index.html">← Spider-Net</a></div>
+  <main class="subpage-main">
+    <h1>Memory</h1>
+    <p class="lede">Flip two cards at a time; find all pairs.</p>
+    <div class="card">
+      <div class="mem-hud">Moves: <strong id="moves">0</strong> · Pairs: <strong id="pairs">0</strong> / <span id="total">8</span></div>
+      <div class="mem-grid" id="grid" aria-label="Memory cards"></div>
+      <div class="mem-actions"><button type="button" class="btn btn-primary" id="shuffle">Shuffle</button></div>
+    </div>
+  </main>
+  <script>
+(function () {
+  const symbols = ["🪲", "🦗", "🕷", "🪰", "🐜", "🐝", "🦋", "🐞"];
+  const gridEl = document.getElementById("grid");
+  const movesEl = document.getElementById("moves");
+  const pairsEl = document.getElementById("pairs");
+  const totalEl = document.getElementById("total");
+  let deck, flipped, moves, matchedCount, lock;
+
+  function shuffle(a) {
+    const arr = [...a];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function buildDeck() {
+    const pairCount = window.innerWidth < 400 ? 6 : 8;
+    const syms = symbols.slice(0, pairCount);
+    totalEl.textContent = String(pairCount);
+    return shuffle([...syms, ...syms].map((s, i) => ({ id: i, sym: s, matched: false })));
+  }
+
+  function render() {
+    gridEl.innerHTML = "";
+    gridEl.style.gridTemplateColumns = deck.length <= 12 ? "repeat(3, 1fr)" : "repeat(4, 1fr)";
+    deck.forEach((card, idx) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mem-card";
+      if (card.matched) {
+        b.classList.add("matched");
+        b.textContent = card.sym;
+        b.disabled = true;
+      } else if (flipped.includes(idx)) {
+        b.textContent = card.sym;
+        b.disabled = lock;
+      } else {
+        b.classList.add("face-down");
+        b.disabled = lock;
+      }
+      b.addEventListener("click", () => flip(idx));
+      gridEl.appendChild(b);
+    });
+  }
+
+  function flip(idx) {
+    if (lock || deck[idx].matched || flipped.includes(idx)) return;
+    if (flipped.length >= 2) return;
+    flipped.push(idx);
+    render();
+    if (flipped.length < 2) return;
+    moves++;
+    movesEl.textContent = String(moves);
+    lock = true;
+    const [a, b] = flipped;
+    if (deck[a].sym === deck[b].sym) {
+      deck[a].matched = deck[b].matched = true;
+      matchedCount++;
+      pairsEl.textContent = String(matchedCount);
+      flipped = [];
+      lock = false;
+      render();
+      if (matchedCount === deck.length / 2) {
+        gridEl.setAttribute("aria-label", "You matched all pairs");
+      }
+    } else {
+      setTimeout(() => {
+        flipped = [];
+        lock = false;
+        render();
+      }, 650);
+    }
+  }
+
+  function reset() {
+    deck = buildDeck();
+    flipped = [];
+    moves = 0;
+    matchedCount = 0;
+    lock = false;
+    movesEl.textContent = "0";
+    pairsEl.textContent = "0";
+    render();
+  }
+
+  document.getElementById("shuffle").addEventListener("click", reset);
+  window.addEventListener("resize", () => {
+    if (deck && deck.length !== (window.innerWidth < 400 ? 12 : 16)) reset();
+  });
+  reset();
+})();
+  </script>
+</body>
+</html>

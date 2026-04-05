@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Todo list — Spider-Net</title>
+  <link rel="stylesheet" href="../subpage.css" />
+  <style>
+    .todo-add {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+    .todo-add input {
+      flex: 1;
+      min-width: 0;
+    }
+    .todo-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .todo-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    .todo-list li.done span {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+    .todo-list button {
+      margin-left: auto;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--danger);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="subpage-top"><a class="back" href="../index.html">← Spider-Net</a></div>
+  <main class="subpage-main">
+    <h1>Todo list</h1>
+    <p class="lede">Stored in <code style="color: var(--accent)">localStorage</code> on this device only.</p>
+    <div class="card">
+      <form class="todo-add" id="form" autocomplete="off">
+        <input type="text" id="text" placeholder="Add a task…" maxlength="200" aria-label="New task" />
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+      <ul class="todo-list" id="list" aria-label="Tasks"></ul>
+    </div>
+  </main>
+  <script>
+(function () {
+  const KEY = "spider-net-todo";
+  const form = document.getElementById("form");
+  const text = document.getElementById("text");
+  const list = document.getElementById("list");
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function save(items) {
+    localStorage.setItem(KEY, JSON.stringify(items));
+  }
+
+  function render() {
+    const items = load();
+    list.innerHTML = "";
+    items.forEach((item, i) => {
+      const li = document.createElement("li");
+      if (item.done) li.classList.add("done");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = item.done;
+      cb.setAttribute("aria-label", "Done");
+      cb.addEventListener("change", () => {
+        items[i].done = cb.checked;
+        save(items);
+        render();
+      });
+      const span = document.createElement("span");
+      span.textContent = item.text;
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "Remove";
+      del.addEventListener("click", () => {
+        items.splice(i, 1);
+        save(items);
+        render();
+      });
+      li.appendChild(cb);
+      li.appendChild(span);
+      li.appendChild(del);
+      list.appendChild(li);
+    });
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const t = text.value.trim();
+    if (!t) return;
+    const items = load();
+    items.push({ text: t, done: false });
+    save(items);
+    text.value = "";
+    render();
+  });
+
+  render();
+})();
+  </script>
+</body>
+</html>

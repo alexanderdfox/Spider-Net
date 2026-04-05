@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tic-tac-toe — Spider-Net</title>
+  <link rel="stylesheet" href="../subpage.css" />
+  <style>
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-width: 280px;
+      margin: 1rem auto;
+    }
+    .cell {
+      aspect-ratio: 1;
+      font-size: 2.25rem;
+      font-weight: 700;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--patrol);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cell:hover:not(:disabled) {
+      background: rgba(84, 160, 255, 0.12);
+    }
+    .cell:disabled {
+      cursor: default;
+      opacity: 0.95;
+    }
+    .cell.x { color: var(--accent); }
+    .cell.o { color: #ff9f43; }
+    .status {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      color: var(--muted);
+      min-height: 1.5em;
+    }
+    .status strong { color: var(--text); }
+    .ttt-actions { text-align: center; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="subpage-top"><a class="back" href="../index.html">← Spider-Net</a></div>
+  <main class="subpage-main">
+    <h1>Tic-tac-toe</h1>
+    <p class="lede">You are <strong style="color: var(--accent)">X</strong>. The web plays <strong style="color: #ff9f43">O</strong>.</p>
+    <div class="card">
+      <p class="status" id="status" role="status">Your turn.</p>
+      <div class="board" id="board" aria-label="3 by 3 grid"></div>
+      <div class="ttt-actions"><button type="button" class="btn btn-primary" id="newGame">New game</button></div>
+    </div>
+  </main>
+  <script>
+(function () {
+  const boardEl = document.getElementById("board");
+  const statusEl = document.getElementById("status");
+  let cells, grid, humanTurn, gameOver;
+
+  function winner(g) {
+    const lines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+    ];
+    for (const [a, b, c] of lines) {
+      if (g[a] && g[a] === g[b] && g[a] === g[c]) return g[a];
+    }
+    if (g.every(Boolean)) return "draw";
+    return null;
+  }
+
+  function render() {
+    boardEl.innerHTML = "";
+    cells = [];
+    for (let i = 0; i < 9; i++) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "cell" + (grid[i] === "X" ? " x" : grid[i] === "O" ? " o" : "");
+      b.textContent = grid[i] || "";
+      b.disabled = !!grid[i] || gameOver || !humanTurn;
+      b.addEventListener("click", () => humanMove(i));
+      boardEl.appendChild(b);
+      cells.push(b);
+    }
+  }
+
+  function setStatus(msg) {
+    statusEl.innerHTML = msg;
+  }
+
+  function humanMove(i) {
+    if (!humanTurn || gameOver || grid[i]) return;
+    grid[i] = "X";
+    humanTurn = false;
+    const w = winner(grid);
+    if (w) return endGame(w);
+    render();
+    setStatus("Web is thinking…");
+    setTimeout(webMove, 280);
+  }
+
+  function webMove() {
+    const empties = grid.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
+    if (!empties.length) return endGame("draw");
+    let pick = empties[Math.floor(Math.random() * empties.length)];
+    for (const i of empties) {
+      const t = [...grid];
+      t[i] = "O";
+      if (winner(t) === "O") {
+        pick = i;
+        break;
+      }
+    }
+    for (const i of empties) {
+      const t = [...grid];
+      t[i] = "X";
+      if (winner(t) === "X") {
+        pick = i;
+        break;
+      }
+    }
+    grid[pick] = "O";
+    const w = winner(grid);
+    if (w) return endGame(w);
+    humanTurn = true;
+    setStatus("Your turn.");
+    render();
+  }
+
+  function endGame(w) {
+    gameOver = true;
+    humanTurn = false;
+    if (w === "draw") setStatus("<strong>Draw.</strong>");
+    else if (w === "X") setStatus("<strong>You win.</strong>");
+    else setStatus("<strong>Web wins.</strong>");
+    render();
+    cells.forEach((c) => (c.disabled = true));
+  }
+
+  function newGame() {
+    grid = Array(9).fill("");
+    humanTurn = true;
+    gameOver = false;
+    setStatus("Your turn.");
+    render();
+  }
+
+  document.getElementById("newGame").addEventListener("click", newGame);
+  newGame();
+})();
+  </script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reaction test — Spider-Net</title>
+  <link rel="stylesheet" href="../subpage.css" />
+  <style>
+    .rx-zone {
+      min-height: 220px;
+      border-radius: 10px;
+      border: 2px dashed var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1.5rem;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s, border-color 0.12s;
+      font-size: 1.05rem;
+      color: var(--muted);
+    }
+    .rx-zone.wait {
+      background: rgba(255, 159, 67, 0.12);
+      border-color: rgba(255, 159, 67, 0.45);
+      color: #ff9f43;
+    }
+    .rx-zone.go {
+      background: rgba(126, 231, 135, 0.2);
+      border-color: var(--accent-dim);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+    .rx-zone.too-soon {
+      background: rgba(255, 107, 107, 0.12);
+      border-color: rgba(255, 107, 107, 0.4);
+      color: var(--danger);
+    }
+    .rx-last {
+      font-family: var(--mono);
+      margin-top: 1rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .rx-last strong {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="subpage-top"><a class="back" href="../index.html">← Spider-Net</a></div>
+  <main class="subpage-main">
+    <h1>Reaction test</h1>
+    <p class="lede">When the pad turns green, tap or click as fast as you can.</p>
+    <div class="card">
+      <div class="rx-zone" id="zone" tabindex="0" role="button" aria-label="Reaction area">
+        Tap to start. Wait for green, then tap.
+      </div>
+      <p class="rx-last" id="last">Last: — · Best: —</p>
+    </div>
+  </main>
+  <script>
+(function () {
+  const zone = document.getElementById("zone");
+  const lastEl = document.getElementById("last");
+  const IDLE = 0,
+    ARMED = 1,
+    WAIT = 2,
+    GO = 3;
+  let state = IDLE;
+  let tGo = 0;
+  let timeoutId = null;
+  let best = null;
+
+  function setZone(cls, text) {
+    zone.className = "rx-zone" + (cls ? " " + cls : "");
+    zone.textContent = text;
+  }
+
+  function clearTimer() {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  }
+
+  function arm() {
+    clearTimer();
+    state = WAIT;
+    setZone("wait", "Wait for green…");
+    const delay = 1500 + Math.random() * 2500;
+    timeoutId = setTimeout(() => {
+      state = GO;
+      tGo = performance.now();
+      setZone("go", "Now!");
+    }, delay);
+  }
+
+  function onPress() {
+    if (state === IDLE || state === ARMED) {
+      state = ARMED;
+      arm();
+      return;
+    }
+    if (state === WAIT) {
+      clearTimer();
+      state = IDLE;
+      setZone("too-soon", "Too soon. Tap to try again.");
+      return;
+    }
+    if (state === GO) {
+      const ms = Math.round(performance.now() - tGo);
+      if (best === null || ms < best) best = ms;
+      lastEl.innerHTML = "Last: <strong>" + ms + " ms</strong> · Best: <strong>" + (best ?? "—") + " ms</strong>";
+      state = IDLE;
+      setZone("", "Tap to run again.");
+    }
+  }
+
+  zone.addEventListener("click", onPress);
+  zone.addEventListener("keydown", (e) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      onPress();
+    }
+  });
+})();
+  </script>
+</body>
+</html>

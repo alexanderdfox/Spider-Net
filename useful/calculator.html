@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculator — Spider-Net</title>
+  <link rel="stylesheet" href="../subpage.css" />
+  <style>
+    .calc-display {
+      font-family: var(--mono);
+      font-size: 1.75rem;
+      text-align: right;
+      padding: 0.75rem 1rem;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 0.75rem;
+      min-height: 2.75rem;
+      word-break: break-all;
+    }
+    .calc-keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .calc-keys button {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      padding: 0.85rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .calc-keys button:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .calc-keys .op {
+      color: var(--accent);
+      background: rgba(126, 231, 135, 0.1);
+    }
+    .calc-keys .span2 {
+      grid-column: span 2;
+    }
+  </style>
+</head>
+<body>
+  <div class="subpage-top"><a class="back" href="../index.html">← Spider-Net</a></div>
+  <main class="subpage-main">
+    <h1>Calculator</h1>
+    <p class="lede">Basic arithmetic in the browser. Nothing is sent to a server.</p>
+    <div class="card">
+      <div class="calc-display" id="display" aria-live="polite">0</div>
+      <div class="calc-keys" id="keys"></div>
+    </div>
+  </main>
+  <script>
+(function () {
+  const display = document.getElementById("display");
+  const keys = document.getElementById("keys");
+  let current = "0";
+  let acc = null;
+  let pendingOp = null;
+  let fresh = true;
+
+  function fmt(s) {
+    const n = parseFloat(s);
+    if (!Number.isFinite(n)) return "Error";
+    const t = String(+n.toPrecision(12));
+    return t.length > 14 ? n.toPrecision(10) : t.replace(/\.?0+$/, "") || "0";
+  }
+
+  function update() {
+    display.textContent = fmt(current);
+  }
+
+  function inputDigit(d) {
+    if (fresh) {
+      current = d === "." ? "0." : d;
+      fresh = false;
+    } else {
+      if (d === "." && current.includes(".")) return;
+      if (current === "0" && d !== ".") current = d;
+      else current += d;
+    }
+    update();
+  }
+
+  function compute(a, b, op) {
+    if (op === "+") return a + b;
+    if (op === "−") return a - b;
+    if (op === "×") return a * b;
+    if (op === "÷") return b === 0 ? NaN : a / b;
+    return b;
+  }
+
+  function press(op) {
+    const n = parseFloat(current);
+    if (!Number.isFinite(n) && op !== "C") return;
+
+    if (op === "C") {
+      current = "0";
+      acc = null;
+      pendingOp = null;
+      fresh = true;
+      update();
+      return;
+    }
+    if (op === "⌫") {
+      if (!fresh && current.length > 1) current = current.slice(0, -1);
+      else {
+        current = "0";
+        fresh = true;
+      }
+      update();
+      return;
+    }
+    if (op === "%") {
+      current = String(parseFloat(current) / 100);
+      update();
+      return;
+    }
+    if (["+", "−", "×", "÷"].includes(op)) {
+      if (acc !== null && pendingOp !== null && !fresh) {
+        acc = compute(acc, n, pendingOp);
+        current = String(acc);
+        update();
+      } else {
+        acc = n;
+      }
+      pendingOp = op;
+      fresh = true;
+      return;
+    }
+    if (op === "=") {
+      if (acc !== null && pendingOp !== null) {
+        acc = compute(acc, n, pendingOp);
+        current = String(acc);
+        acc = null;
+        pendingOp = null;
+        fresh = true;
+        update();
+      }
+    }
+  }
+
+  const spec = [
+    { k: "C", cls: "op" },
+    { k: "⌫", cls: "op" },
+    { k: "%", cls: "op" },
+    { k: "÷", cls: "op" },
+    { k: "7" },
+    { k: "8" },
+    { k: "9" },
+    { k: "×", cls: "op" },
+    { k: "4" },
+    { k: "5" },
+    { k: "6" },
+    { k: "−", cls: "op" },
+    { k: "1" },
+    { k: "2" },
+    { k: "3" },
+    { k: "+", cls: "op" },
+    { k: "0", span: 2 },
+    { k: "." },
+    { k: "=", cls: "op" },
+  ];
+
+  spec.forEach(({ k, cls, span }) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = k;
+    if (cls) b.className = cls;
+    if (span) b.classList.add("span2");
+    b.addEventListener("click", () => {
+      if ((k >= "0" && k <= "9") || k === ".") inputDigit(k);
+      else press(k);
+    });
+    keys.appendChild(b);
+  });
+
+  update();
+})();
+  </script>
+</body>
+</html>

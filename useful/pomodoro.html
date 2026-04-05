@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pomodoro — Spider-Net</title>
+  <link rel="stylesheet" href="../subpage.css" />
+  <style>
+    .pom-display {
+      font-family: var(--mono);
+      font-size: clamp(2.5rem, 10vw, 4rem);
+      font-weight: 700;
+      text-align: center;
+      margin: 1rem 0;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .pom-mode {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.5rem;
+    }
+    .pom-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    .pom-presets {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+    .pom-presets button {
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="subpage-top"><a class="back" href="../index.html">← Spider-Net</a></div>
+  <main class="subpage-main">
+    <h1>Pomodoro</h1>
+    <p class="lede">Focus and break intervals. Timer runs in this tab.</p>
+    <div class="card">
+      <div class="pom-mode" id="mode">Focus</div>
+      <div class="pom-display" id="clock" role="timer" aria-live="polite">25:00</div>
+      <div class="pom-actions">
+        <button type="button" class="btn btn-primary" id="toggle">Start</button>
+        <button type="button" class="btn" id="reset">Reset</button>
+      </div>
+      <div class="pom-presets">
+        <button type="button" class="btn" data-focus="25" data-break="5">25 / 5</button>
+        <button type="button" class="btn" data-focus="50" data-break="10">50 / 10</button>
+        <button type="button" class="btn" data-focus="15" data-break="3">15 / 3</button>
+      </div>
+    </div>
+  </main>
+  <script>
+(function () {
+  const clockEl = document.getElementById("clock");
+  const modeEl = document.getElementById("mode");
+  const toggleBtn = document.getElementById("toggle");
+  const resetBtn = document.getElementById("reset");
+
+  let focusMin = 25;
+  let breakMin = 5;
+  let secondsLeft = focusMin * 60;
+  let onBreak = false;
+  let running = false;
+  let intervalId = null;
+
+  function fmt(s) {
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return String(m).padStart(2, "0") + ":" + String(r).padStart(2, "0");
+  }
+
+  function paint() {
+    clockEl.textContent = fmt(secondsLeft);
+    modeEl.textContent = onBreak ? "Break" : "Focus";
+    document.title = (running ? "▶ " : "") + fmt(secondsLeft) + " — Spider-Net";
+    toggleBtn.textContent = running ? "Pause" : "Start";
+  }
+
+  function tick() {
+    if (secondsLeft <= 0) {
+      onBreak = !onBreak;
+      secondsLeft = (onBreak ? breakMin : focusMin) * 60;
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) {
+          const ctx = new Ctx();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.connect(g);
+          g.connect(ctx.destination);
+          o.frequency.value = 880;
+          g.gain.value = 0.06;
+          o.start();
+          o.stop(ctx.currentTime + 0.12);
+        }
+      } catch (_) {}
+      paint();
+      return;
+    }
+    secondsLeft--;
+    paint();
+  }
+
+  function startTimer() {
+    if (intervalId) return;
+    intervalId = setInterval(tick, 1000);
+    running = true;
+    paint();
+  }
+
+  function stopTimer() {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    running = false;
+    paint();
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    if (running) stopTimer();
+    else startTimer();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    stopTimer();
+    onBreak = false;
+    secondsLeft = focusMin * 60;
+    paint();
+  });
+
+  document.querySelectorAll(".pom-presets button").forEach((b) => {
+    b.addEventListener("click", () => {
+      focusMin = Number(b.dataset.focus);
+      breakMin = Number(b.dataset.break);
+      stopTimer();
+      onBreak = false;
+      secondsLeft = focusMin * 60;
+      paint();
+    });
+  });
+
+  paint();
+})();
+  </script>
+</body>
+</html>
