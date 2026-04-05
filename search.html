@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Search — Spider-Net</title>
+  <link rel="stylesheet" href="subpage.css" />
+  <style>
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .search-bar input[type="search"] {
+      flex: 1;
+      min-width: 200px;
+      font-size: 1rem;
+      padding: 0.65rem 0.85rem;
+    }
+    .search-meta {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .search-meta strong {
+      color: var(--accent);
+    }
+    .results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .results li {
+      margin-bottom: 0.65rem;
+    }
+    .hit {
+      display: block;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.25);
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .hit:hover {
+      border-color: var(--accent-dim);
+      background: rgba(126, 231, 135, 0.06);
+    }
+    .hit-path {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--patrol);
+      margin-bottom: 0.25rem;
+    }
+    .hit-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+    .hit-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .hit-score {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+      font-family: var(--mono);
+    }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem 1rem;
+      font-size: 0.95rem;
+    }
+    .folder-tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-right: 0.35rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="subpage-top"><a class="back" href="index.html">← Spider-Net</a></div>
+  <main class="subpage-main">
+    <h1>Search</h1>
+    <p class="lede">
+      Find pages under <code style="color: var(--accent)">games/</code> and
+      <code style="color: var(--accent)">useful/</code> (and home) by keyword. All matching is done in your browser.
+    </p>
+
+    <div class="card">
+      <div class="search-bar">
+        <input
+          type="search"
+          id="q"
+          placeholder="e.g. snake, password, timer, math…"
+          autocomplete="off"
+          aria-label="Search keywords"
+          autofocus
+        />
+        <button type="button" class="btn btn-primary" id="clear">Clear</button>
+      </div>
+      <p class="search-meta" id="meta"><strong id="count">0</strong> pages indexed · type to filter</p>
+      <ul class="results" id="results" aria-live="polite"></ul>
+    </div>
+  </main>
+  <script>
+(function () {
+  /**
+   * Curated index: paths under this site + terms people might search.
+   * Add rows here when you add new HTML under games/ or useful/.
+   */
+  const PAGES = [
+    {
+      path: "index.html",
+      folder: "home",
+      title: "Spider-Net crawler",
+      desc: "Fabrilis-inspired web crawl simulation, live same-origin crawl, graph map.",
+      keywords:
+        "crawler spider web crawl graph map alopecosa fabrilis simulation territory patrol strike hunt nodes",
+    },
+    {
+      path: "search.html",
+      folder: "home",
+      title: "Search",
+      desc: "Keyword search across games and tools in this project.",
+      keywords: "search find keyword lookup index directory",
+    },
+    {
+      path: "games/snake.html",
+      folder: "games",
+      title: "Snake",
+      desc: "Classic snake on a canvas; arrow keys, space to pause, swipe on touch.",
+      keywords: "game snake arcade eat dots score keyboard mobile canvas",
+    },
+    {
+      path: "games/tictactoe.html",
+      folder: "games",
+      title: "Tic-tac-toe",
+      desc: "Play X against a simple web opponent on a 3×3 grid.",
+      keywords: "game tic tac toe noughts crosses x o grid board",
+    },
+    {
+      path: "games/memory.html",
+      folder: "games",
+      title: "Memory",
+      desc: "Flip cards and match pairs; bug and spider-themed symbols.",
+      keywords: "game memory pairs match cards flip concentration",
+    },
+    {
+      path: "games/reaction.html",
+      folder: "games",
+      title: "Reaction test",
+      desc: "Wait for green, then click — measures reflex time in milliseconds.",
+      keywords: "game reaction reflex speed timing click test ms latency",
+    },
+    {
+      path: "useful/calculator.html",
+      folder: "useful",
+      title: "Calculator",
+      desc: "Basic calculator: add subtract multiply divide percent.",
+      keywords: "tool calculator math arithmetic numbers plus minus times divide percent",
+    },
+    {
+      path: "useful/todo.html",
+      folder: "useful",
+      title: "Todo list",
+      desc: "Simple tasks saved in localStorage on this device.",
+      keywords: "tool todo task list checklist productivity reminders local",
+    },
+    {
+      path: "useful/pomodoro.html",
+      folder: "useful",
+      title: "Pomodoro",
+      desc: "Focus and break timer with presets (25/5, 50/10, 15/3).",
+      keywords: "tool pomodoro timer focus break productivity work session clock",
+    },
+    {
+      path: "useful/password.html",
+      folder: "useful",
+      title: "Password generator",
+      desc: "Random passwords with length and character set options; uses crypto.getRandomValues.",
+      keywords: "tool password generator random secure crypto copy security login",
+    },
+  ];
+
+  const qEl = document.getElementById("q");
+  const resultsEl = document.getElementById("results");
+  const countEl = document.getElementById("count");
+  const metaEl = document.getElementById("meta");
+  const clearBtn = document.getElementById("clear");
+
+  function tokens(s) {
+    return s
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  function scorePage(page, toks) {
+    if (!toks.length) return { score: 0, hits: [] };
+    let score = 0;
+    const hits = [];
+    for (const t of toks) {
+      if (!t) continue;
+      if (page.title.toLowerCase().includes(t)) {
+        score += 12;
+        hits.push("title");
+      }
+      if (page.keywords.includes(t)) {
+        score += 8;
+        hits.push("keywords");
+      }
+      if (page.desc.toLowerCase().includes(t)) {
+        score += 5;
+        hits.push("description");
+      }
+      if (page.path.toLowerCase().includes(t)) {
+        score += 4;
+        hits.push("path");
+      }
+      if (page.folder.includes(t)) {
+        score += 3;
+        hits.push("folder");
+      }
+    }
+    return { score, hits: [...new Set(hits)] };
+  }
+
+  function render() {
+    const toks = tokens(qEl.value);
+    countEl.textContent = String(PAGES.length);
+
+    let ranked = PAGES.map((p) => ({ p, ...scorePage(p, toks) }));
+
+    if (toks.length) {
+      ranked = ranked.filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+      metaEl.innerHTML =
+        "<strong>" +
+        ranked.length +
+        "</strong> match" +
+        (ranked.length === 1 ? "" : "es") +
+        " · <strong>" +
+        PAGES.length +
+        "</strong> indexed";
+    } else {
+      ranked.sort((a, b) => {
+        const fa = a.p.folder + a.p.path;
+        const fb = b.p.folder + b.p.path;
+        return fa.localeCompare(fb);
+      });
+      metaEl.innerHTML =
+        "<strong>" +
+        PAGES.length +
+        "</strong> pages indexed · type to filter";
+    }
+
+    resultsEl.innerHTML = "";
+    if (toks.length && ranked.length === 0) {
+      const div = document.createElement("div");
+      div.className = "empty";
+      div.textContent = "No pages match those keywords. Try broader terms (e.g. “game” or “tool”).";
+      resultsEl.appendChild(div);
+      return;
+    }
+
+    for (const { p, score, hits } of ranked) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.className = "hit";
+      a.href = p.path;
+
+      const pathRow = document.createElement("div");
+      pathRow.className = "hit-path";
+      pathRow.innerHTML =
+        '<span class="folder-tag">' +
+        p.folder +
+        "</span>" +
+        p.path;
+
+      const title = document.createElement("div");
+      title.className = "hit-title";
+      title.textContent = p.title;
+
+      const desc = document.createElement("div");
+      desc.className = "hit-desc";
+      desc.textContent = p.desc;
+
+      a.appendChild(pathRow);
+      a.appendChild(title);
+      a.appendChild(desc);
+
+      if (toks.length && score > 0) {
+        const sc = document.createElement("div");
+        sc.className = "hit-score";
+        sc.textContent = "Relevance " + score + (hits.length ? " · matched: " + hits.join(", ") : "");
+        a.appendChild(sc);
+      }
+
+      li.appendChild(a);
+      resultsEl.appendChild(li);
+    }
+  }
+
+  let t = null;
+  qEl.addEventListener("input", () => {
+    clearTimeout(t);
+    t = setTimeout(render, 120);
+  });
+
+  clearBtn.addEventListener("click", () => {
+    qEl.value = "";
+    render();
+    qEl.focus();
+  });
+
+  render();
+})();
+  </script>
+</body>
+</html>
