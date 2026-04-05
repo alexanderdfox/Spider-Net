@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spider-Net — Fabrilis crawl</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="web-bg" aria-hidden="true"></div>
+
+  <header class="header">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">🕷</span>
+      <div>
+        <h1>Spider-Net</h1>
+        <p class="tagline">
+          Crawl behavior inspired by <em>Alopecosa fabrilis</em> — sheet-web mapping,
+          territorial patrol, and directed strikes along rich link trails.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel controls-panel" aria-label="Crawler controls">
+      <h2>Hunt controls</h2>
+
+      <label class="field">
+        <span>Start URL</span>
+        <input type="url" id="startUrl" placeholder="https://yoursite.com/" autocomplete="off" />
+      </label>
+
+      <div class="row">
+        <label class="check">
+          <input type="checkbox" id="simMode" checked />
+          <span>Simulation mode</span>
+        </label>
+        <span class="hint" title="Browsers block cross-origin HTML reads. Simulation builds a synthetic site graph; turn off when serving this app from the same origin as the target.">
+          (avoids CORS)
+        </span>
+      </div>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Max nodes</span>
+          <input type="number" id="maxNodes" min="5" max="500" value="48" />
+        </label>
+        <label class="field">
+          <span>Patience (ms)</span>
+          <input type="number" id="delayMs" min="0" max="5000" value="320" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Depth cap</span>
+        <input type="range" id="maxDepth" min="1" max="8" value="4" />
+        <span class="range-val" id="maxDepthVal">4</span>
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn primary" id="btnStart">Begin hunt</button>
+        <button type="button" class="btn" id="btnPause" disabled>Pause</button>
+        <button type="button" class="btn ghost" id="btnReset">Clear web</button>
+      </div>
+
+      <div class="phase" id="phaseDisplay">
+        <span class="phase-label">Phase</span>
+        <span class="phase-value" id="phaseValue">idle</span>
+      </div>
+    </section>
+
+    <section class="viz-wrap" aria-label="Web graph">
+      <canvas id="webCanvas" width="900" height="560"></canvas>
+      <div class="viz-legend">
+        <span><i class="dot prey"></i> discovered node</span>
+        <span><i class="dot current"></i> current target</span>
+        <span class="spider-mini" aria-hidden="true">🕷</span>
+        <span>hunter position</span>
+      </div>
+    </section>
+
+    <section class="panel log-panel" aria-label="Discovery log">
+      <h2>Silk trail</h2>
+      <div class="stats" id="stats"></div>
+      <ol class="log" id="log" reversed></ol>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>
+      Pure HTML, CSS, and JavaScript. Same-origin pages can be crawled live; otherwise use simulation.
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
